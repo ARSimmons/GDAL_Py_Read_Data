@@ -1,7 +1,7 @@
 ###############################################
 ## Arielle Simmons                           ##
-## Planner/GIS Specialist                    ##
-## Pioneer Valley Planning Commission        ##
+## Data Engineer                             ##
+## Tableau Software                          ##
 ## Date created: January 28, 2013            ##
 ## Date modified:                            ##
 ###############################################
@@ -28,24 +28,24 @@
 ## on the 'Path' variable.
 
 from osgeo import ogr
-import osr
-import os
 import fnmatch
 import sys
 import string
 import re
+import osr
+import os
 
 # To begin, I set the initial directory workspace. "directory" is the initial directory to
 # search under,
 # WARNING : THIS MUST BE SET BEFORE THE USER BEGINS USING THIS SCRIPT
 
-folder = r'C:\Users\asimmons\Desktop\Code_Test\testdata\OGR_Proj'
+folder = r'C:\Users\ASimmons\Desktop\Code\OGR_GDAL_ReadData\Sample_Data\pe_StPro'
 
 
 # This function helps transform the projection file into an EPSG code,
 # the function was obtained from a stackoverflow posting here: http://tinyurl.com/ctrc4bx
 
-def wkt2epsg(wkt, epsg='C:/Program Files/GDAL/projlib/epsg', forceProj4=False):
+def wkt2epsg(wkt, epsg=r'C:\Program Files (x86)\GDAL\projlib\epsg', forceProj4=False):
 
 
 # wkt: WKT definition
@@ -91,9 +91,9 @@ def wkt2epsg(wkt, epsg='C:/Program Files/GDAL/projlib/epsg', forceProj4=False):
                # match
                    return 'EPSG:%s' % code
                else:  # no match
-                   return None
+                   return 'EPSG: ' ,None
            else:
-               return None
+               return 'EPSG: ' ,None
 
 # Using the os.walk and fnmatch functions, I construct a list of shapefile paths
 # to pass in my driver.Open() funtion
@@ -130,27 +130,72 @@ for shp in shpList:
        dataset = driver.Open(shp, 0)
        # command to access the layers in a shapefile  and get field names
        layer = dataset.GetLayer(0)
+       feature = layer.GetFeature(0)
+       feature2 = layer.GetFeature(1)
        layer_defn = layer.GetLayerDefn()
        field_names = [layer_defn.GetFieldDefn(i).GetName() for i in range(layer_defn.GetFieldCount())]
 
-       # print command 
-       print shp
-       print field_names
+       # get extent as a tuple
+
+       extent = layer.GetExtent()
+
+       # get geometry type, if there is one
+       
+       geometry = feature.GetGeometryRef()
+       if geometry is not None:
+              geo_type = geometry.GetGeometryName()
+
+       # get some sample data
+       feature1_items = feature.items()
+       
+       # get some sample data
+       # if there is a second feature, get it
+       if feature2 is not None:
+              feature2_items = feature2.items()
+
+
+       
+       # print command
+       print "##### BEGIN RECORD #####"
+       # print name of shapefile
+       base=os.path.basename(shp)
+       base=os.path.splitext(base)[0]
+       print 'Dataset Name: ' + base
+       # print relative path
+       relpath = shp
+       common_prefix = 'C:\Users\ASimmons\Desktop\Code\OGR_GDAL_ReadData'
+       relative_paths = [os.path.relpath(path, common_prefix)]
+       print "Dataset Path: .\\","\\".join(relative_paths)
        numFeatures = layer.GetFeatureCount()
        print 'Number of Features: ' + str(numFeatures)
-
+       if geometry is not None:
+              print 'Geometry Type: ' , geo_type
+       else:
+              print 'Geometry Type: ' + "NO GEOMETRY"
+       print 'Fields: ' , field_names
+       print 'Extent: ' , extent
+ #      print 'Upper Left: ', extent[0], extent[3]
+ #      print 'Lower Right: ', extent[1], extent[2]
+       numFeatures = layer.GetFeatureCount() 
        # Read and print the projection information of the shapefile
-       # Note: If the shapefile doesn't have a .prj, it doesn't include SRS info!
-       spatialRef = layer.GetSpatialRef().ExportToWkt()
-       print shp + " has the WKT spatial reference:   %s" % (spatialRef)
-       # use the function wkt2epsg to print epsg code, if possible
-       print wkt2epsg(spatialRef)
-       
+       # Note: If the shapefile doesn't have a .prj, it doesn't include SRS info!\
+       try:
+              spatialRef = layer.GetSpatialRef().ExportToWkt()
+              print "WKT spatial reference:   %s" % (spatialRef)
+              # use the function wkt2epsg to print epsg code, if possible
+              print wkt2epsg(spatialRef)
+       except:
+              print "WKT spatial reference: NULL - THIS FEATURE HAD NO SRS"
+       print 'Sample Values: '
+       print feature1_items
+       if feature2 is not None:
+              print feature2_items
+       print "##### END RECORD #####"
+       print " "
 
 if dataset is None:
        print 'Could not open ' + shp
        sys.exit(1)
-
 
 
 
